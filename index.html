@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AI 助手 - 安全版</title>
+    <title>AI 助手 - 调试版</title>
     <style>
         * {
             margin: 0;
@@ -136,6 +136,7 @@
             font-size: 12px;
             opacity: 0.9;
             margin-top: 5px;
+            min-height: 18px;
         }
         
         .settings-btn {
@@ -153,15 +154,83 @@
             cursor: pointer;
         }
         
-        .chat-container {
+        /* 调试信息面板 */
+        .debug-panel {
             position: fixed;
             top: 70px;
+            left: 0;
+            right: 0;
+            background: #fff3cd;
+            border-bottom: 2px solid #ffc107;
+            padding: 10px;
+            font-size: 12px;
+            color: #856404;
+            z-index: 98;
+            max-height: 100px;
+            overflow-y: auto;
+            display: none;
+        }
+        
+        .debug-panel.show {
+            display: block;
+        }
+        
+        .debug-toggle {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            -webkit-transform: translateY(-50%);
+            transform: translateY(-50%);
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        
+        /* 进度条 */
+        .progress-bar {
+            position: fixed;
+            top: 70px;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: rgba(102, 126, 234, 0.1);
+            z-index: 99;
+            display: none;
+        }
+        
+        .progress-bar.active {
+            display: block;
+        }
+        
+        .progress-bar.with-debug {
+            top: 170px;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            width: 0%;
+            transition: width 0.3s ease;
+            -webkit-transition: width 0.3s ease;
+        }
+        
+        .chat-container {
+            position: fixed;
+            top: 73px;
             bottom: 60px;
             left: 0;
             right: 0;
             overflow-y: auto;
             -webkit-overflow-scrolling: touch;
             padding: 15px;
+        }
+        
+        .chat-container.with-debug {
+            top: 173px;
         }
         
         .message {
@@ -193,6 +262,7 @@
             line-height: 1.4;
             word-wrap: break-word;
             text-align: left;
+            min-height: 20px;
         }
         
         .message.user .message-content {
@@ -208,7 +278,31 @@
             box-shadow: 0 1px 2px rgba(0,0,0,0.1);
         }
         
-        /* 思考过程样式 */
+        .typing-cursor {
+            display: inline-block;
+            width: 2px;
+            height: 16px;
+            background: #667eea;
+            margin-left: 2px;
+            animation: blink 1s infinite;
+            -webkit-animation: blink 1s infinite;
+            vertical-align: middle;
+        }
+        
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+        
+        @-webkit-keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+        
+        .typing-cursor.hidden {
+            display: none;
+        }
+        
         .thinking-content {
             background: #f0f4ff;
             border-left: 3px solid #667eea;
@@ -235,6 +329,65 @@
             padding: 0 5px;
         }
         
+        .loading-container {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            background: white;
+            border-radius: 18px;
+            margin-bottom: 15px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+        
+        .loading-container.show {
+            display: block;
+        }
+        
+        .loading-text {
+            color: #667eea;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+        
+        .loading-dots:after {
+            content: '';
+            animation: dots 1.5s infinite;
+            -webkit-animation: dots 1.5s infinite;
+        }
+        
+        @keyframes dots {
+            0%, 20% { content: '.'; }
+            40% { content: '..'; }
+            60%, 100% { content: '...'; }
+        }
+        
+        @-webkit-keyframes dots {
+            0%, 20% { content: '.'; }
+            40% { content: '..'; }
+            60%, 100% { content: '...'; }
+        }
+        
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            -webkit-animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        @-webkit-keyframes spin {
+            0% { -webkit-transform: rotate(0deg); }
+            100% { -webkit-transform: rotate(360deg); }
+        }
+        
         .input-container {
             position: fixed;
             bottom: 0;
@@ -249,6 +402,7 @@
             -webkit-box-align: center;
             -webkit-align-items: center;
             align-items: center;
+            z-index: 50;
         }
         
         .input-wrapper {
@@ -277,6 +431,7 @@
             font-size: 15px;
             cursor: pointer;
             -webkit-appearance: none;
+            min-width: 60px;
         }
         
         #sendBtn:active {
@@ -287,39 +442,6 @@
             background: #ccc;
         }
         
-        .loading {
-            display: none;
-            text-align: center;
-            padding: 20px;
-            color: #667eea;
-        }
-        
-        .loading.show {
-            display: block;
-        }
-        
-        .loading-dots {
-            display: inline-block;
-        }
-        
-        .loading-dots:after {
-            content: '';
-            animation: dots 1.5s infinite;
-            -webkit-animation: dots 1.5s infinite;
-        }
-        
-        @keyframes dots {
-            0%, 20% { content: '.'; }
-            40% { content: '..'; }
-            60%, 100% { content: '...'; }
-        }
-        
-        @-webkit-keyframes dots {
-            0%, 20% { content: '.'; }
-            40% { content: '..'; }
-            60%, 100% { content: '...'; }
-        }
-        
         .error-message {
             background: #ffebee;
             color: #c62828;
@@ -328,6 +450,7 @@
             margin: 10px 0;
             font-size: 14px;
             display: none;
+            word-break: break-all;
         }
         
         .error-message.show {
@@ -351,7 +474,6 @@
             line-height: 1.6;
         }
         
-        /* 设置面板 */
         .settings-panel {
             position: fixed;
             top: 0;
@@ -477,11 +599,9 @@
             transform: translateX(22px);
         }
         
-        .clear-btn {
+        .clear-btn, .logout-btn, .test-btn {
             width: 100%;
             padding: 12px;
-            background: #ffebee;
-            color: #c62828;
             border: none;
             border-radius: 10px;
             font-size: 14px;
@@ -489,16 +609,19 @@
             margin-top: 10px;
         }
         
+        .clear-btn {
+            background: #ffebee;
+            color: #c62828;
+        }
+        
         .logout-btn {
-            width: 100%;
-            padding: 12px;
             background: #f5f5f5;
             color: #666;
-            border: none;
-            border-radius: 10px;
-            font-size: 14px;
-            cursor: pointer;
-            margin-top: 10px;
+        }
+        
+        .test-btn {
+            background: #e3f2fd;
+            color: #1976d2;
         }
     </style>
 </head>
@@ -524,7 +647,7 @@
             
             <div class="setting-item">
                 <label class="setting-label">深度思考模式</label>
-                <p class="setting-desc">开启后 AI 会进行更深入的推理分析（消耗更多 Token）</p>
+                <p class="setting-desc">开启后 AI 会进行更深入的推理分析</p>
                 <label class="toggle-switch">
                     <input type="checkbox" id="thinkingToggle" onchange="toggleThinking()">
                     <span class="toggle-slider"></span>
@@ -532,14 +655,27 @@
             </div>
             
             <div class="setting-item">
+                <label class="setting-label">流式输出</label>
+                <p class="setting-desc">实时显示 AI 回复（打字机效果）</p>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="streamToggle" checked onchange="toggleStream()">
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+            
+            <div class="setting-item">
+                <label class="setting-label">网络测试</label>
+                <p class="setting-desc">测试 API 连接是否正常</p>
+                <button class="test-btn" onclick="testConnection()">🧪 测试连接</button>
+            </div>
+            
+            <div class="setting-item">
                 <label class="setting-label">清除对话历史</label>
-                <p class="setting-desc">清空所有聊天记录，不可恢复</p>
                 <button class="clear-btn" onclick="clearHistory()">🗑️ 清除历史</button>
             </div>
             
             <div class="setting-item">
                 <label class="setting-label">退出登录</label>
-                <p class="setting-desc">清除密码缓存，下次需要重新输入</p>
                 <button class="logout-btn" onclick="logout()">🚪 退出登录</button>
             </div>
         </div>
@@ -547,20 +683,31 @@
 
     <!-- 主界面 -->
     <div class="header">
+        <button class="debug-toggle" onclick="toggleDebug()">调试</button>
         <h1>🤖 AI 智能助手</h1>
         <div class="status" id="status">就绪</div>
         <button class="settings-btn" onclick="openSettings()">设置</button>
     </div>
     
+    <!-- 调试面板 -->
+    <div class="debug-panel" id="debugPanel"></div>
+    
+    <!-- 进度条 -->
+    <div class="progress-bar" id="progressBar">
+        <div class="progress-fill" id="progressFill"></div>
+    </div>
+    
     <div class="chat-container" id="chatContainer">
         <div class="welcome" id="welcome">
             <h2>欢迎使用 AI 助手</h2>
-            <p>基于智谱清言 GLM-4.6V-Flash 模型<br>支持深度思考模式<br>在下方输入框开始对话</p>
+            <p>基于智谱清言 GLM-4.6V-Flash 模型<br>支持流式输出与深度思考<br>在下方输入框开始对话</p>
         </div>
-    </div>
-    
-    <div class="loading" id="loading">
-        <div class="loading-dots">AI 思考中</div>
+        
+        <!-- 加载容器 -->
+        <div class="loading-container" id="loadingBox">
+            <div class="spinner"></div>
+            <div class="loading-text">AI 正在思考<span class="loading-dots"></span></div>
+        </div>
     </div>
     
     <div class="error-message" id="errorMsg"></div>
@@ -573,40 +720,45 @@
     </div>
 
     <script>
-        // ==================== 加密与安全模块 ====================
+        // ==================== 调试工具 ====================
+        var debugMode = false;
+        var debugPanel = document.getElementById('debugPanel');
         
-        // 混淆的 API Key（使用自定义算法打散存储）
-        // 原始 Key: 62de8f8245034489a009e72cad9c0795.TiznOPeDsVYqBw4P
-        var ENCRYPTED_KEY_PARTS = [
-            '62de8f8245034489a009e72cad9c0795',
-            'TiznOPeDsVYqBw4P'
-        ];
-        
-        var KEY_HASH_SEED = 0x9e3779b9;
-        
-        // 简单的字符串哈希函数（用于验证）
-        function hashString(str) {
-            var hash = KEY_HASH_SEED;
-            for (var i = 0; i < str.length; i++) {
-                var char = str.charCodeAt(i);
-                hash = ((hash << 5) - hash) + char;
-                hash = hash & hash; // 转换为 32位整数
+        function log(msg) {
+            console.log(msg);
+            if (debugMode && debugPanel) {
+                var line = document.createElement('div');
+                line.textContent = new Date().toLocaleTimeString() + ': ' + msg;
+                debugPanel.appendChild(line);
+                debugPanel.scrollTop = debugPanel.scrollHeight;
             }
-            return Math.abs(hash).toString(16);
         }
         
-        // 重组 API Key（运行时动态重组）
+        function toggleDebug() {
+            debugMode = !debugMode;
+            var chatContainer = document.getElementById('chatContainer');
+            var progressBar = document.getElementById('progressBar');
+            
+            if (debugMode) {
+                debugPanel.className = 'debug-panel show';
+                chatContainer.className = 'chat-container with-debug';
+                progressBar.className = 'progress-bar with-debug';
+                log('调试模式已开启');
+            } else {
+                debugPanel.className = 'debug-panel';
+                chatContainer.className = 'chat-container';
+                progressBar.className = 'progress-bar';
+            }
+        }
+        
+        // ==================== 加密模块 ====================
+        var ENCRYPTED_KEY_PARTS = ['62de8f8245034489a009e72cad9c0795', 'TiznOPeDsVYqBw4P'];
+        
         function reconstructApiKey() {
-            // 添加干扰后重组
-            var part1 = ENCRYPTED_KEY_PARTS[0];
-            var part2 = ENCRYPTED_KEY_PARTS[1];
-            return part1 + '.' + part2;
+            return ENCRYPTED_KEY_PARTS[0] + '.' + ENCRYPTED_KEY_PARTS[1];
         }
         
-        // 验证密码哈希（密码: NullptrVoid）
-        var CORRECT_PASSWORD_HASH = '8f4e2b1c9d3a5f7e'; // NullptrVoid 的哈希值
-        
-        // Cookie 操作（兼容 iOS 10）
+        // Cookie 操作
         function setCookie(name, value, days) {
             var expires = '';
             if (days) {
@@ -632,58 +784,65 @@
             document.cookie = name + '=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
         }
         
-        // ==================== 配置与状态 ====================
+        function hashString(str) {
+            var hash = 0x9e3779b9;
+            for (var i = 0; i < str.length; i++) {
+                var char = str.charCodeAt(i);
+                hash = ((hash << 5) - hash) + char;
+                hash = hash & hash;
+            }
+            return Math.abs(hash).toString(16);
+        }
         
+        // ==================== 配置 ====================
         var CONFIG = {
             API_URL: 'https://open.bigmodel.cn/api/paas/v4/chat/completions',
             MODEL: 'GLM-4.6V-Flash',
-            PASSWORD: 'NullptrVoid'
+            PASSWORD: 'NullptrVoid',
+            STREAM_CHUNK_SIZE: 2,
+            STREAM_DELAY: 40
         };
         
         var messages = [];
         var isProcessing = false;
         var thinkingEnabled = false;
+        var streamEnabled = true;
+        var currentStreamInterval = null;
         
         // ==================== DOM 元素 ====================
-        
         var passwordLayer = document.getElementById('passwordLayer');
         var passwordInput = document.getElementById('passwordInput');
         var passwordError = document.getElementById('passwordError');
         var chatContainer = document.getElementById('chatContainer');
         var userInput = document.getElementById('userInput');
         var sendBtn = document.getElementById('sendBtn');
-        var loading = document.getElementById('loading');
-        var errorMsg = document.getElementById('errorMsg');
+        var loadingBox = document.getElementById('loadingBox');
         var welcome = document.getElementById('welcome');
         var status = document.getElementById('status');
         var settingsPanel = document.getElementById('settingsPanel');
         var thinkingToggle = document.getElementById('thinkingToggle');
+        var streamToggle = document.getElementById('streamToggle');
+        var progressBar = document.getElementById('progressBar');
+        var progressFill = document.getElementById('progressFill');
+        var errorMsg = document.getElementById('errorMsg');
         
         // ==================== 密码验证 ====================
-        
         function checkPassword() {
             var input = passwordInput.value;
-            var inputHash = hashString(input);
-            
-            // 直接字符串比对（更可靠）
             if (input === CONFIG.PASSWORD) {
-                // 保存登录状态（7天）
                 setCookie('ai_auth', hashString(CONFIG.PASSWORD + 'salt123'), 7);
                 passwordLayer.className = 'password-layer hidden';
                 initApp();
             } else {
                 passwordError.className = 'password-error show';
                 passwordInput.value = '';
-                setTimeout(function() {
-                    passwordError.className = 'password-error';
-                }, 3000);
+                setTimeout(function() { passwordError.className = 'password-error'; }, 3000);
             }
         }
         
         function checkAuth() {
             var auth = getCookie('ai_auth');
             var expectedHash = hashString(CONFIG.PASSWORD + 'salt123');
-            
             if (auth === expectedHash) {
                 passwordLayer.className = 'password-layer hidden';
                 initApp();
@@ -697,49 +856,134 @@
             window.location.reload();
         }
         
-        // ==================== 应用初始化 ====================
-        
+        // ==================== 初始化 ====================
         function initApp() {
-            // 加载设置
             var savedThinking = getCookie('thinking_mode');
             if (savedThinking === 'true') {
                 thinkingEnabled = true;
                 thinkingToggle.checked = true;
             }
             
+            var savedStream = getCookie('stream_mode');
+            if (savedStream === 'false') {
+                streamEnabled = false;
+                streamToggle.checked = false;
+            }
+            
             userInput.focus();
+            log('应用初始化完成');
         }
         
-        // ==================== 设置功能 ====================
-        
-        function openSettings() {
-            settingsPanel.className = 'settings-panel show';
-        }
-        
-        function closeSettings() {
-            settingsPanel.className = 'settings-panel';
-        }
+        // ==================== 设置 ====================
+        function openSettings() { settingsPanel.className = 'settings-panel show'; }
+        function closeSettings() { settingsPanel.className = 'settings-panel'; }
         
         function toggleThinking() {
             thinkingEnabled = thinkingToggle.checked;
             setCookie('thinking_mode', thinkingEnabled, 30);
-            status.textContent = thinkingEnabled ? '深度思考模式开启' : '标准模式';
-            setTimeout(function() {
-                status.textContent = '就绪';
-            }, 2000);
+            status.textContent = thinkingEnabled ? '深度思考已开启' : '标准模式';
+            setTimeout(function() { status.textContent = '就绪'; }, 2000);
+        }
+        
+        function toggleStream() {
+            streamEnabled = streamToggle.checked;
+            setCookie('stream_mode', streamEnabled, 30);
+            status.textContent = streamEnabled ? '流式输出已开启' : '流式输出已关闭';
+            setTimeout(function() { status.textContent = '就绪'; }, 2000);
         }
         
         function clearHistory() {
             if (confirm('确定要清除所有对话历史吗？')) {
                 messages = [];
-                chatContainer.innerHTML = '<div class="welcome" id="welcome"><h2>欢迎使用 AI 助手</h2><p>基于智谱清言 GLM-4.6V-Flash 模型<br>支持深度思考模式<br>在下方输入框开始对话</p></div>';
+                chatContainer.innerHTML = '<div class="welcome" id="welcome"><h2>欢迎使用 AI 助手</h2><p>基于智谱清言 GLM-4.6V-Flash 模型<br>支持流式输出与深度思考<br>在下方输入框开始对话</p></div><div class="loading-container" id="loadingBox"><div class="spinner"></div><div class="loading-text">AI 正在思考<span class="loading-dots"></span></div></div>';
                 welcome = document.getElementById('welcome');
+                loadingBox = document.getElementById('loadingBox');
                 closeSettings();
             }
         }
         
-        // ==================== 聊天功能 ====================
+        // ==================== 网络测试 ====================
+        function testConnection() {
+            log('开始测试 API 连接...');
+            status.textContent = '测试中...';
+            
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', CONFIG.API_URL, true);
+            xhr.setRequestHeader('Content-Type', 'application/json');
+            xhr.setRequestHeader('Authorization', 'Bearer ' + reconstructApiKey());
+            
+            var testData = {
+                model: CONFIG.MODEL,
+                messages: [{role: 'user', content: '你好'}],
+                max_tokens: 10
+            };
+            
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === 4) {
+                    log('测试完成，状态码: ' + xhr.status);
+                    log('响应内容: ' + xhr.responseText.substring(0, 200));
+                    
+                    if (xhr.status === 200) {
+                        alert('✅ 连接成功！API 工作正常');
+                        status.textContent = '连接正常';
+                    } else {
+                        alert('❌ 连接失败: ' + xhr.status + '\n' + xhr.responseText.substring(0, 100));
+                        status.textContent = '连接失败';
+                    }
+                    setTimeout(function() { status.textContent = '就绪'; }, 3000);
+                }
+            };
+            
+            xhr.onerror = function() {
+                log('测试失败: 网络错误');
+                alert('❌ 网络错误，无法连接到 API');
+                status.textContent = '网络错误';
+            };
+            
+            xhr.timeout = 30000;
+            xhr.ontimeout = function() {
+                log('测试失败: 超时');
+                alert('❌ 连接超时');
+                status.textContent = '超时';
+            };
+            
+            try {
+                xhr.send(JSON.stringify(testData));
+                log('测试请求已发送');
+            } catch (e) {
+                log('发送失败: ' + e.message);
+                alert('发送失败: ' + e.message);
+            }
+        }
         
+        // ==================== 进度条控制 ====================
+        function showProgress() {
+            progressBar.className = debugMode ? 'progress-bar active with-debug' : 'progress-bar active';
+            progressFill.style.width = '0%';
+            
+            var width = 0;
+            var interval = setInterval(function() {
+                if (width >= 90) {
+                    clearInterval(interval);
+                } else {
+                    width += Math.random() * 10;
+                    if (width > 90) width = 90;
+                    progressFill.style.width = width + '%';
+                }
+            }, 300);
+            
+            return interval;
+        }
+        
+        function hideProgress() {
+            progressFill.style.width = '100%';
+            setTimeout(function() {
+                progressBar.className = debugMode ? 'progress-bar with-debug' : 'progress-bar';
+                progressFill.style.width = '0%';
+            }, 300);
+        }
+        
+        // ==================== 消息处理 ====================
         function getTime() {
             var now = new Date();
             var hours = now.getHours();
@@ -747,77 +991,105 @@
             return (hours < 10 ? '0' : '') + hours + ':' + (minutes < 10 ? '0' : '') + minutes;
         }
         
-        function addMessage(content, isUser, thinking) {
-            if (welcome) {
-                welcome.style.display = 'none';
-            }
+        function createMessageElement(isUser) {
+            if (welcome) welcome.style.display = 'none';
             
             var messageDiv = document.createElement('div');
             messageDiv.className = 'message ' + (isUser ? 'user' : 'ai');
             
-            var contentWrapper = document.createElement('div');
-            contentWrapper.className = 'message-content';
-            
-            // 如果有思考过程，先显示思考
-            if (thinking && !isUser) {
-                var thinkingDiv = document.createElement('div');
-                thinkingDiv.className = 'thinking-content';
-                
-                var thinkingLabel = document.createElement('div');
-                thinkingLabel.className = 'thinking-label';
-                thinkingLabel.textContent = '💭 思考过程';
-                
-                var thinkingText = document.createElement('div');
-                thinkingText.textContent = thinking;
-                
-                thinkingDiv.appendChild(thinkingLabel);
-                thinkingDiv.appendChild(thinkingText);
-                contentWrapper.appendChild(thinkingDiv);
-            }
-            
-            // 主内容
-            var mainContent = document.createElement('div');
-            mainContent.textContent = content;
-            contentWrapper.appendChild(mainContent);
+            var contentDiv = document.createElement('div');
+            contentDiv.className = 'message-content';
             
             var timeDiv = document.createElement('div');
             timeDiv.className = 'message-time';
             timeDiv.textContent = getTime();
             
-            messageDiv.appendChild(contentWrapper);
+            messageDiv.appendChild(contentDiv);
             messageDiv.appendChild(timeDiv);
             chatContainer.appendChild(messageDiv);
             
-            chatContainer.scrollTop = chatContainer.scrollHeight;
+            return { messageDiv: messageDiv, contentDiv: contentDiv };
         }
         
+        // ==================== 流式输出 ====================
+        function streamText(element, text, callback) {
+            if (!streamEnabled) {
+                element.textContent = text;
+                if (callback) callback();
+                return;
+            }
+            
+            var index = 0;
+            var currentText = '';
+            var cursor = document.createElement('span');
+            cursor.className = 'typing-cursor';
+            
+            element.appendChild(cursor);
+            
+            currentStreamInterval = setInterval(function() {
+                if (index < text.length) {
+                    var chunk = text.substr(index, CONFIG.STREAM_CHUNK_SIZE);
+                    currentText += chunk;
+                    element.textContent = currentText;
+                    element.appendChild(cursor);
+                    index += CONFIG.STREAM_CHUNK_SIZE;
+                    chatContainer.scrollTop = chatContainer.scrollHeight;
+                } else {
+                    clearInterval(currentStreamInterval);
+                    cursor.className = 'typing-cursor hidden';
+                    if (callback) callback();
+                }
+            }, CONFIG.STREAM_DELAY);
+        }
+        
+        function stopStream() {
+            if (currentStreamInterval) {
+                clearInterval(currentStreamInterval);
+                currentStreamInterval = null;
+            }
+        }
+        
+        // ==================== 发送消息 ====================
         function showError(msg) {
             errorMsg.textContent = msg;
             errorMsg.className = 'error-message show';
-            setTimeout(function() {
-                errorMsg.className = 'error-message';
-            }, 5000);
+            log('错误: ' + msg);
+            setTimeout(function() { errorMsg.className = 'error-message'; }, 8000);
         }
         
         function sendMessage() {
-            if (isProcessing) return;
+            if (isProcessing) {
+                log('正在处理中，忽略重复提交');
+                return;
+            }
             
             var content = userInput.value.trim();
-            if (!content) return;
+            if (!content) {
+                log('输入为空');
+                return;
+            }
             
-            addMessage(content, true, null);
-            messages.push({
-                role: 'user',
-                content: content
-            });
+            log('开始发送消息: ' + content.substring(0, 20) + '...');
+            stopStream();
+            
+            // 添加用户消息
+            var userElements = createMessageElement(true);
+            userElements.contentDiv.textContent = content;
+            messages.push({ role: 'user', content: content });
             
             userInput.value = '';
-            loading.className = 'loading show';
-            sendBtn.disabled = true;
             isProcessing = true;
-            status.textContent = thinkingEnabled ? '深度思考中...' : '思考中...';
+            sendBtn.disabled = true;
+            sendBtn.textContent = '...';
             
-            // 构建请求体
+            // 显示加载
+            loadingBox.className = 'loading-container show';
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+            
+            var progressInterval = showProgress();
+            status.textContent = thinkingEnabled ? '深度思考中...' : 'AI 思考中...';
+            
+            // 准备请求
             var requestBody = {
                 model: CONFIG.MODEL,
                 messages: messages,
@@ -825,101 +1097,158 @@
                 max_tokens: 2000
             };
             
-            // 添加深度思考参数（GLM-4.6V-Flash 支持）
             if (thinkingEnabled) {
-                requestBody.thinking = {
-                    type: "enabled"
-                };
+                requestBody.thinking = { type: "enabled" };
             }
             
+            log('请求体: ' + JSON.stringify(requestBody).substring(0, 100) + '...');
+            
             var xhr = new XMLHttpRequest();
-            xhr.open('POST', CONFIG.API_URL, true);
-            xhr.setRequestHeader('Content-Type', 'application/json');
-            xhr.setRequestHeader('Authorization', 'Bearer ' + reconstructApiKey());
             
             xhr.onreadystatechange = function() {
+                log('状态变化: readyState=' + xhr.readyState + ', status=' + xhr.status);
+                
                 if (xhr.readyState === 4) {
-                    loading.className = 'loading';
-                    sendBtn.disabled = false;
-                    isProcessing = false;
+                    clearInterval(progressInterval);
+                    loadingBox.className = 'loading-container';
+                    
+                    log('请求完成，状态码: ' + xhr.status);
+                    log('响应长度: ' + xhr.responseText.length);
+                    
+                    if (xhr.status === 0) {
+                        hideProgress();
+                        showError('网络错误: 无法连接到服务器 (CORS 或网络问题)');
+                        isProcessing = false;
+                        sendBtn.disabled = false;
+                        sendBtn.textContent = '发送';
+                        status.textContent = '网络错误';
+                        return;
+                    }
                     
                     if (xhr.status === 200) {
                         try {
                             var response = JSON.parse(xhr.responseText);
+                            log('解析成功: ' + JSON.stringify(response).substring(0, 100));
+                            
                             if (response.choices && response.choices[0] && response.choices[0].message) {
                                 var message = response.choices[0].message;
                                 var aiContent = message.content;
+                                var thinking = message.reasoning_content;
                                 
-                                // 提取思考过程（如果存在）
-                                var thinking = null;
-                                if (message.reasoning_content) {
-                                    thinking = message.reasoning_content;
-                                }
+                                log('收到回复，长度: ' + aiContent.length);
                                 
-                                addMessage(aiContent, false, thinking);
+                                // 创建 AI 消息元素
+                                var aiElements = createMessageElement(false);
                                 
-                                var pushMsg = {
-                                    role: 'assistant',
-                                    content: aiContent
-                                };
+                                // 显示思考过程
                                 if (thinking) {
-                                    pushMsg.reasoning_content = thinking;
+                                    var thinkingDiv = document.createElement('div');
+                                    thinkingDiv.className = 'thinking-content';
+                                    thinkingDiv.innerHTML = '<div class="thinking-label">💭 思考过程</div><div>' + thinking + '</div>';
+                                    aiElements.contentDiv.appendChild(thinkingDiv);
                                 }
-                                messages.push(pushMsg);
                                 
-                                status.textContent = '就绪';
+                                var mainContent = document.createElement('div');
+                                aiElements.contentDiv.appendChild(mainContent);
+                                
+                                status.textContent = '输出中...';
+                                
+                                streamText(mainContent, aiContent, function() {
+                                    hideProgress();
+                                    isProcessing = false;
+                                    sendBtn.disabled = false;
+                                    sendBtn.textContent = '发送';
+                                    status.textContent = '就绪';
+                                    
+                                    var pushMsg = { role: 'assistant', content: aiContent };
+                                    if (thinking) pushMsg.reasoning_content = thinking;
+                                    messages.push(pushMsg);
+                                    
+                                    log('回复完成');
+                                });
+                                
+                            } else if (response.error) {
+                                throw new Error('API 错误: ' + (response.error.message || '未知错误'));
                             } else {
-                                showError('响应格式错误');
-                                status.textContent = '错误';
+                                throw new Error('响应格式错误: 缺少 choices');
                             }
                         } catch (e) {
-                            showError('解析响应失败');
+                            hideProgress();
+                            log('解析错误: ' + e.message);
+                            showError('解析失败: ' + e.message + '\n原始响应: ' + xhr.responseText.substring(0, 100));
+                            isProcessing = false;
+                            sendBtn.disabled = false;
+                            sendBtn.textContent = '发送';
                             status.textContent = '错误';
                         }
                     } else {
-                        var errorText = '请求失败: ' + xhr.status;
+                        hideProgress();
+                        var errorText = 'HTTP 错误: ' + xhr.status;
                         try {
                             var errorData = JSON.parse(xhr.responseText);
                             if (errorData.error && errorData.error.message) {
                                 errorText = errorData.error.message;
                             }
-                        } catch (e) {}
+                        } catch (e) {
+                            errorText += ' - ' + xhr.responseText.substring(0, 100);
+                        }
+                        log('请求失败: ' + errorText);
                         showError(errorText);
-                        status.textContent = '错误';
+                        isProcessing = false;
+                        sendBtn.disabled = false;
+                        sendBtn.textContent = '发送';
+                        status.textContent = '错误 ' + xhr.status;
                     }
                 }
             };
             
             xhr.onerror = function() {
-                loading.className = 'loading';
-                sendBtn.disabled = false;
+                clearInterval(progressInterval);
+                hideProgress();
+                loadingBox.className = 'loading-container';
+                log('XHR onerror 触发');
+                showError('网络请求失败 (CORS 或连接问题)\n请检查网络连接，或尝试点击左上角"调试"按钮查看详情');
                 isProcessing = false;
-                showError('网络请求失败');
+                sendBtn.disabled = false;
+                sendBtn.textContent = '发送';
                 status.textContent = '网络错误';
             };
             
-            xhr.timeout = 120000; // 深度思考可能需要更长时间
             xhr.ontimeout = function() {
-                loading.className = 'loading';
-                sendBtn.disabled = false;
+                clearInterval(progressInterval);
+                hideProgress();
+                loadingBox.className = 'loading-container';
+                log('请求超时');
+                showError('请求超时 (60秒)');
                 isProcessing = false;
-                showError('请求超时');
+                sendBtn.disabled = false;
+                sendBtn.textContent = '发送';
                 status.textContent = '超时';
             };
             
+            xhr.timeout = 60000;
+            
             try {
+                xhr.open('POST', CONFIG.API_URL, true);
+                xhr.setRequestHeader('Content-Type', 'application/json');
+                xhr.setRequestHeader('Authorization', 'Bearer ' + reconstructApiKey());
+                log('XHR 已打开，准备发送');
                 xhr.send(JSON.stringify(requestBody));
+                log('请求已发送');
             } catch (e) {
-                loading.className = 'loading';
-                sendBtn.disabled = false;
+                clearInterval(progressInterval);
+                hideProgress();
+                loadingBox.className = 'loading-container';
+                log('发送异常: ' + e.message);
+                showError('发送失败: ' + e.message);
                 isProcessing = false;
-                showError('发送失败');
+                sendBtn.disabled = false;
+                sendBtn.textContent = '发送';
                 status.textContent = '错误';
             }
         }
         
         // ==================== 事件监听 ====================
-        
         passwordInput.onkeypress = function(e) {
             if (e.keyCode === 13) checkPassword();
         };
@@ -928,15 +1257,12 @@
             if (e.keyCode === 13) sendMessage();
         };
         
-        // 点击设置面板外部关闭
         settingsPanel.onclick = function(e) {
             if (e.target === settingsPanel) closeSettings();
         };
         
-        // ==================== 启动 ====================
-        
         window.onload = function() {
-            // 检查是否已登录
+            log('页面加载完成');
             if (!checkAuth()) {
                 passwordInput.focus();
             }
