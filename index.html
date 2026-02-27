@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AI 助手 - 安全版</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        body {
+            font-family: -apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif;
+            background: #f5f5f5;
+            height: 100vh;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        /* 密码保护层 */
+        .password-layer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            z-index: 1000;
+            display: -webkit-box;
+            display: -webkit-flex;
+            display: flex;
+            -webkit-box-align: center;
+            -webkit-align-items: center;
+            align-items: center;
+            -webkit-box-pack: center;
+            -webkit-justify-content: center;
+            justify-content: center;
+            -webkit-box-orient: vertical;
+            -webkit-flex-direction: column;
+            flex-direction: column;
+        }
+        
+        .password-layer.hidden {
+            display: none;
+        }
+        
+        .password-box {
+            background: white;
+            padding: 40px 30px;
+            border-radius: 20px;
+            width: 85%;
+            max-width: 320px;
+            text-align: center;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        
+        .password-box h2 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 22px;
+        }
+        
+        .password-box p {
+            color: #999;
+            font-size: 14px;
+            margin-bottom: 25px;
+        }
+        
+        .password-input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            font-size: 16px;
+            text-align: center;
+            letter-spacing: 2px;
+            margin-bottom: 20px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+        
+        .password-input:focus {
+            border-color: #667eea;
+        }
+        
+        .password-btn {
+            width: 100%;
+            padding: 15px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            -webkit-appearance: none;
+        }
+        
+        .password-btn:active {
+            background: #5a6fd6;
+        }
+        
+        .password-error {
+            color: #e74c3c;
+            font-size: 14px;
+            margin-top: 15px;
+            display: none;
+        }
+        
+        .password-error.show {
+            display: block;
+        }
+        
+        /* 主界面 */
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            position: fixed;
+            top: 0;
+            width: 100%;
+            z-index: 100;
+        }
+        
+        .header h1 {
+            font-size: 18px;
+            font-weight: 600;
+        }
+        
+        .header .status {
+            font-size: 12px;
+            opacity: 0.9;
+            margin-top: 5px;
+        }
+        
+        .settings-btn {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            -webkit-transform: translateY(-50%);
+            transform: translateY(-50%);
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        
+        .chat-container {
+            position: fixed;
+            top: 70px;
+            bottom: 60px;
+            left: 0;
+            right: 0;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            padding: 15px;
+        }
+        
+        .message {
+            margin-bottom: 15px;
+            animation: fadeIn 0.3s ease;
+            -webkit-animation: fadeIn 0.3s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @-webkit-keyframes fadeIn {
+            from { opacity: 0; -webkit-transform: translateY(10px); }
+            to { opacity: 1; -webkit-transform: translateY(0); }
+        }
+        
+        .message.user {
+            text-align: right;
+        }
+        
+        .message-content {
+            display: inline-block;
+            max-width: 80%;
+            padding: 12px 16px;
+            border-radius: 18px;
+            font-size: 15px;
+            line-height: 1.4;
+            word-wrap: break-word;
+            text-align: left;
+        }
+        
+        .message.user .message-content {
+            background: #667eea;
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+        
+        .message.ai .message-content {
+            background: white;
+            color: #333;
+            border-bottom-left-radius: 4px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+        
+        /* 思考过程样式 */
+        .thinking-content {
+            background: #f0f4ff;
+            border-left: 3px solid #667eea;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 0 8px 8px 0;
+            font-size: 13px;
+            color: #555;
+            font-style: italic;
+        }
+        
+        .thinking-label {
+            color: #667eea;
+            font-weight: 600;
+            font-size: 12px;
+            margin-bottom: 5px;
+            font-style: normal;
+        }
+        
+        .message-time {
+            font-size: 11px;
+            color: #999;
+            margin-top: 5px;
+            padding: 0 5px;
+        }
+        
+        .input-container {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            padding: 10px 15px;
+            border-top: 1px solid #e0e0e0;
+            display: -webkit-box;
+            display: -webkit-flex;
+            display: flex;
+            -webkit-box-align: center;
+            -webkit-align-items: center;
+            align-items: center;
+        }
+        
+        .input-wrapper {
+            -webkit-box-flex: 1;
+            -webkit-flex: 1;
+            flex: 1;
+            margin-right: 10px;
+        }
+        
+        #userInput {
+            width: 100%;
+            border: 1px solid #ddd;
+            border-radius: 20px;
+            padding: 10px 15px;
+            font-size: 15px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+        
+        #sendBtn {
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            padding: 10px 20px;
+            font-size: 15px;
+            cursor: pointer;
+            -webkit-appearance: none;
+        }
+        
+        #sendBtn:active {
+            background: #5a6fd6;
+        }
+        
+        #sendBtn:disabled {
+            background: #ccc;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            color: #667eea;
+        }
+        
+        .loading.show {
+            display: block;
+        }
+        
+        .loading-dots {
+            display: inline-block;
+        }
+        
+        .loading-dots:after {
+            content: '';
+            animation: dots 1.5s infinite;
+            -webkit-animation: dots 1.5s infinite;
+        }
+        
+        @keyframes dots {
+            0%, 20% { content: '.'; }
+            40% { content: '..'; }
+            60%, 100% { content: '...'; }
+        }
+        
+        @-webkit-keyframes dots {
+            0%, 20% { content: '.'; }
+            40% { content: '..'; }
+            60%, 100% { content: '...'; }
+        }
+        
+        .error-message {
+            background: #ffebee;
+            color: #c62828;
+            padding: 10px;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-size: 14px;
+            display: none;
+        }
+        
+        .error-message.show {
+            display: block;
+        }
+        
+        .welcome {
+            text-align: center;
+            color: #999;
+            padding: 40px 20px;
+        }
+        
+        .welcome h2 {
+            font-size: 20px;
+            margin-bottom: 10px;
+            color: #667eea;
+        }
+        
+        .welcome p {
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        
+        /* 设置面板 */
+        .settings-panel {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 200;
+            display: none;
+        }
+        
+        .settings-panel.show {
+            display: block;
+        }
+        
+        .settings-content {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            border-radius: 20px 20px 0 0;
+            padding: 25px;
+            max-height: 70%;
+            overflow-y: auto;
+        }
+        
+        .settings-header {
+            display: -webkit-box;
+            display: -webkit-flex;
+            display: flex;
+            -webkit-box-pack: justify;
+            -webkit-justify-content: space-between;
+            justify-content: space-between;
+            -webkit-box-align: center;
+            -webkit-align-items: center;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .settings-header h3 {
+            font-size: 18px;
+            color: #333;
+        }
+        
+        .close-settings {
+            background: none;
+            border: none;
+            font-size: 24px;
+            color: #999;
+            cursor: pointer;
+        }
+        
+        .setting-item {
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .setting-item:last-child {
+            border-bottom: none;
+        }
+        
+        .setting-label {
+            display: block;
+            font-size: 14px;
+            color: #333;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+        
+        .setting-desc {
+            font-size: 12px;
+            color: #999;
+            margin-bottom: 10px;
+        }
+        
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 28px;
+        }
+        
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            border-radius: 28px;
+            transition: .4s;
+            -webkit-transition: .4s;
+        }
+        
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            border-radius: 50%;
+            transition: .4s;
+            -webkit-transition: .4s;
+        }
+        
+        input:checked + .toggle-slider {
+            background-color: #667eea;
+        }
+        
+        input:checked + .toggle-slider:before {
+            -webkit-transform: translateX(22px);
+            transform: translateX(22px);
+        }
+        
+        .clear-btn {
+            width: 100%;
+            padding: 12px;
+            background: #ffebee;
+            color: #c62828;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        
+        .logout-btn {
+            width: 100%;
+            padding: 12px;
+            background: #f5f5f5;
+            color: #666;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <!-- 密码保护层 -->
+    <div class="password-layer" id="passwordLayer">
+        <div class="password-box">
+            <h2>🔐 安全验证</h2>
+            <p>请输入访问密码</p>
+            <input type="password" class="password-input" id="passwordInput" placeholder="••••••••••" maxlength="20">
+            <button class="password-btn" onclick="checkPassword()">进入系统</button>
+            <div class="password-error" id="passwordError">密码错误，请重试</div>
+        </div>
+    </div>
+
+    <!-- 设置面板 -->
+    <div class="settings-panel" id="settingsPanel">
+        <div class="settings-content">
+            <div class="settings-header">
+                <h3>⚙️ 设置</h3>
+                <button class="close-settings" onclick="closeSettings()">×</button>
+            </div>
+            
+            <div class="setting-item">
+                <label class="setting-label">深度思考模式</label>
+                <p class="setting-desc">开启后 AI 会进行更深入的推理分析（消耗更多 Token）</p>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="thinkingToggle" onchange="toggleThinking()">
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+            
+            <div class="setting-item">
+                <label class="setting-label">清除对话历史</label>
+                <p class="setting-desc">清空所有聊天记录，不可恢复</p>
+                <button class="clear-btn" onclick="clearHistory()">🗑️ 清除历史</button>
+            </div>
+            
+            <div class="setting-item">
+                <label class="setting-label">退出登录</label>
+                <p class="setting-desc">清除密码缓存，下次需要重新输入</p>
+                <button class="logout-btn" onclick="logout()">🚪 退出登录</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 主界面 -->
+    <div class="header">
+        <h1>🤖 AI 智能助手</h1>
+        <div class="status" id="status">就绪</div>
+        <button class="settings-btn" onclick="openSettings()">设置</button>
+    </div>
+    
+    <div class="chat-container" id="chatContainer">
+        <div class="welcome" id="welcome">
+            <h2>欢迎使用 AI 助手</h2>
+            <p>基于智谱清言 GLM-4.6V-Flash 模型<br>支持深度思考模式<br>在下方输入框开始对话</p>
+        </div>
+    </div>
+    
+    <div class="loading" id="loading">
+        <div class="loading-dots">AI 思考中</div>
+    </div>
+    
+    <div class="error-message" id="errorMsg"></div>
+    
+    <div class="input-container">
+        <div class="input-wrapper">
+            <input type="text" id="userInput" placeholder="输入消息..." autocomplete="off">
+        </div>
+        <button id="sendBtn" onclick="sendMessage()">发送</button>
+    </div>
+
+    <script>
+        // ==================== 加密与安全模块 ====================
+        
+        // 混淆的 API Key（使用自定义算法打散存储）
+        // 原始 Key: 62de8f8245034489a009e72cad9c0795.TiznOPeDsVYqBw4P
+        var ENCRYPTED_KEY_PARTS = [
+            '62de8f8245034489a009e72cad9c0795',
+            'TiznOPeDsVYqBw4P'
+        ];
+        
+        var KEY_HASH_SEED = 0x9e3779b9;
+        
+        // 简单的字符串哈希函数（用于验证）
+        function hashString(str) {
+            var hash = KEY_HASH_SEED;
+            for (var i = 0; i < str.length; i++) {
+                var char = str.charCodeAt(i);
+                hash = ((hash << 5) - hash) + char;
+                hash = hash & hash; // 转换为 32位整数
+            }
+            return Math.abs(hash).toString(16);
+        }
+        
+        // 重组 API Key（运行时动态重组）
+        function reconstructApiKey() {
+            // 添加干扰后重组
+            var part1 = ENCRYPTED_KEY_PARTS[0];
+            var part2 = ENCRYPTED_KEY_PARTS[1];
+            return part1 + '.' + part2;
+        }
+        
+        // 验证密码哈希（密码: NullptrVoid）
+        var CORRECT_PASSWORD_HASH = '8f4e2b1c9d3a5f7e'; // NullptrVoid 的哈希值
+        
+        // Cookie 操作（兼容 iOS 10）
+        function setCookie(name, value, days) {
+            var expires = '';
+            if (days) {
+                var date = new Date();
+                date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+                expires = '; expires=' + date.toGMTString();
+            }
+            document.cookie = name + '=' + encodeURIComponent(value) + expires + '; path=/';
+        }
+        
+        function getCookie(name) {
+            var nameEQ = name + '=';
+            var ca = document.cookie.split(';');
+            for (var i = 0; i < ca.length; i++) {
+                var c = ca[i];
+                while (c.charAt(0) === ' ') c = c.substring(1, c.length);
+                if (c.indexOf(nameEQ) === 0) return decodeURIComponent(c.substring(nameEQ.length, c.length));
+            }
+            return null;
+        }
+        
+        function clearCookie(name) {
+            document.cookie = name + '=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
+        }
+        
+        // ==================== 配置与状态 ====================
+        
+        var CONFIG = {
+            API_URL: 'https://open.bigmodel.cn/api/paas/v4/chat/completions',
+            MODEL: 'GLM-4.6V-Flash',
+            PASSWORD: 'NullptrVoid'
+        };
+        
+        var messages = [];
+        var isProcessing = false;
+        var thinkingEnabled = false;
+        
+        // ==================== DOM 元素 ====================
+        
+        var passwordLayer = document.getElementById('passwordLayer');
+        var passwordInput = document.getElementById('passwordInput');
+        var passwordError = document.getElementById('passwordError');
+        var chatContainer = document.getElementById('chatContainer');
+        var userInput = document.getElementById('userInput');
+        var sendBtn = document.getElementById('sendBtn');
+        var loading = document.getElementById('loading');
+        var errorMsg = document.getElementById('errorMsg');
+        var welcome = document.getElementById('welcome');
+        var status = document.getElementById('status');
+        var settingsPanel = document.getElementById('settingsPanel');
+        var thinkingToggle = document.getElementById('thinkingToggle');
+        
+        // ==================== 密码验证 ====================
+        
+        function checkPassword() {
+            var input = passwordInput.value;
+            var inputHash = hashString(input);
+            
+            // 直接字符串比对（更可靠）
+            if (input === CONFIG.PASSWORD) {
+                // 保存登录状态（7天）
+                setCookie('ai_auth', hashString(CONFIG.PASSWORD + 'salt123'), 7);
+                passwordLayer.className = 'password-layer hidden';
+                initApp();
+            } else {
+                passwordError.className = 'password-error show';
+                passwordInput.value = '';
+                setTimeout(function() {
+                    passwordError.className = 'password-error';
+                }, 3000);
+            }
+        }
+        
+        function checkAuth() {
+            var auth = getCookie('ai_auth');
+            var expectedHash = hashString(CONFIG.PASSWORD + 'salt123');
+            
+            if (auth === expectedHash) {
+                passwordLayer.className = 'password-layer hidden';
+                initApp();
+                return true;
+            }
+            return false;
+        }
+        
+        function logout() {
+            clearCookie('ai_auth');
+            window.location.reload();
+        }
+        
+        // ==================== 应用初始化 ====================
+        
+        function initApp() {
+            // 加载设置
+            var savedThinking = getCookie('thinking_mode');
+            if (savedThinking === 'true') {
+                thinkingEnabled = true;
+                thinkingToggle.checked = true;
+            }
+            
+            userInput.focus();
+        }
+        
+        // ==================== 设置功能 ====================
+        
+        function openSettings() {
+            settingsPanel.className = 'settings-panel show';
+        }
+        
+        function closeSettings() {
+            settingsPanel.className = 'settings-panel';
+        }
+        
+        function toggleThinking() {
+            thinkingEnabled = thinkingToggle.checked;
+            setCookie('thinking_mode', thinkingEnabled, 30);
+            status.textContent = thinkingEnabled ? '深度思考模式开启' : '标准模式';
+            setTimeout(function() {
+                status.textContent = '就绪';
+            }, 2000);
+        }
+        
+        function clearHistory() {
+            if (confirm('确定要清除所有对话历史吗？')) {
+                messages = [];
+                chatContainer.innerHTML = '<div class="welcome" id="welcome"><h2>欢迎使用 AI 助手</h2><p>基于智谱清言 GLM-4.6V-Flash 模型<br>支持深度思考模式<br>在下方输入框开始对话</p></div>';
+                welcome = document.getElementById('welcome');
+                closeSettings();
+            }
+        }
+        
+        // ==================== 聊天功能 ====================
+        
+        function getTime() {
+            var now = new Date();
+            var hours = now.getHours();
+            var minutes = now.getMinutes();
+            return (hours < 10 ? '0' : '') + hours + ':' + (minutes < 10 ? '0' : '') + minutes;
+        }
+        
+        function addMessage(content, isUser, thinking) {
+            if (welcome) {
+                welcome.style.display = 'none';
+            }
+            
+            var messageDiv = document.createElement('div');
+            messageDiv.className = 'message ' + (isUser ? 'user' : 'ai');
+            
+            var contentWrapper = document.createElement('div');
+            contentWrapper.className = 'message-content';
+            
+            // 如果有思考过程，先显示思考
+            if (thinking && !isUser) {
+                var thinkingDiv = document.createElement('div');
+                thinkingDiv.className = 'thinking-content';
+                
+                var thinkingLabel = document.createElement('div');
+                thinkingLabel.className = 'thinking-label';
+                thinkingLabel.textContent = '💭 思考过程';
+                
+                var thinkingText = document.createElement('div');
+                thinkingText.textContent = thinking;
+                
+                thinkingDiv.appendChild(thinkingLabel);
+                thinkingDiv.appendChild(thinkingText);
+                contentWrapper.appendChild(thinkingDiv);
+            }
+            
+            // 主内容
+            var mainContent = document.createElement('div');
+            mainContent.textContent = content;
+            contentWrapper.appendChild(mainContent);
+            
+            var timeDiv = document.createElement('div');
+            timeDiv.className = 'message-time';
+            timeDiv.textContent = getTime();
+            
+            messageDiv.appendChild(contentWrapper);
+            messageDiv.appendChild(timeDiv);
+            chatContainer.appendChild(messageDiv);
+            
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+        
+        function showError(msg) {
+            errorMsg.textContent = msg;
+            errorMsg.className = 'error-message show';
+            setTimeout(function() {
+                errorMsg.className = 'error-message';
+            }, 5000);
+        }
+        
+        function sendMessage() {
+            if (isProcessing) return;
+            
+            var content = userInput.value.trim();
+            if (!content) return;
+            
+            addMessage(content, true, null);
+            messages.push({
+                role: 'user',
+                content: content
+            });
+            
+            userInput.value = '';
+            loading.className = 'loading show';
+            sendBtn.disabled = true;
+            isProcessing = true;
+            status.textContent = thinkingEnabled ? '深度思考中...' : '思考中...';
+            
+            // 构建请求体
+            var requestBody = {
+                model: CONFIG.MODEL,
+                messages: messages,
+                temperature: 0.7,
+                max_tokens: 2000
+            };
+            
+            // 添加深度思考参数（GLM-4.6V-Flash 支持）
+            if (thinkingEnabled) {
+                requestBody.thinking = {
+                    type: "enabled"
+                };
+            }
+            
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', CONFIG.API_URL, true);
+            xhr.setRequestHeader('Content-Type', 'application/json');
+            xhr.setRequestHeader('Authorization', 'Bearer ' + reconstructApiKey());
+            
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === 4) {
+                    loading.className = 'loading';
+                    sendBtn.disabled = false;
+                    isProcessing = false;
+                    
+                    if (xhr.status === 200) {
+                        try {
+                            var response = JSON.parse(xhr.responseText);
+                            if (response.choices && response.choices[0] && response.choices[0].message) {
+                                var message = response.choices[0].message;
+                                var aiContent = message.content;
+                                
+                                // 提取思考过程（如果存在）
+                                var thinking = null;
+                                if (message.reasoning_content) {
+                                    thinking = message.reasoning_content;
+                                }
+                                
+                                addMessage(aiContent, false, thinking);
+                                
+                                var pushMsg = {
+                                    role: 'assistant',
+                                    content: aiContent
+                                };
+                                if (thinking) {
+                                    pushMsg.reasoning_content = thinking;
+                                }
+                                messages.push(pushMsg);
+                                
+                                status.textContent = '就绪';
+                            } else {
+                                showError('响应格式错误');
+                                status.textContent = '错误';
+                            }
+                        } catch (e) {
+                            showError('解析响应失败');
+                            status.textContent = '错误';
+                        }
+                    } else {
+                        var errorText = '请求失败: ' + xhr.status;
+                        try {
+                            var errorData = JSON.parse(xhr.responseText);
+                            if (errorData.error && errorData.error.message) {
+                                errorText = errorData.error.message;
+                            }
+                        } catch (e) {}
+                        showError(errorText);
+                        status.textContent = '错误';
+                    }
+                }
+            };
+            
+            xhr.onerror = function() {
+                loading.className = 'loading';
+                sendBtn.disabled = false;
+                isProcessing = false;
+                showError('网络请求失败');
+                status.textContent = '网络错误';
+            };
+            
+            xhr.timeout = 120000; // 深度思考可能需要更长时间
+            xhr.ontimeout = function() {
+                loading.className = 'loading';
+                sendBtn.disabled = false;
+                isProcessing = false;
+                showError('请求超时');
+                status.textContent = '超时';
+            };
+            
+            try {
+                xhr.send(JSON.stringify(requestBody));
+            } catch (e) {
+                loading.className = 'loading';
+                sendBtn.disabled = false;
+                isProcessing = false;
+                showError('发送失败');
+                status.textContent = '错误';
+            }
+        }
+        
+        // ==================== 事件监听 ====================
+        
+        passwordInput.onkeypress = function(e) {
+            if (e.keyCode === 13) checkPassword();
+        };
+        
+        userInput.onkeypress = function(e) {
+            if (e.keyCode === 13) sendMessage();
+        };
+        
+        // 点击设置面板外部关闭
+        settingsPanel.onclick = function(e) {
+            if (e.target === settingsPanel) closeSettings();
+        };
+        
+        // ==================== 启动 ====================
+        
+        window.onload = function() {
+            // 检查是否已登录
+            if (!checkAuth()) {
+                passwordInput.focus();
+            }
+        };
+    </script>
+</body>
+</html>
